@@ -2,22 +2,30 @@ package geecache
 
 import (
 	"fmt"
+	"geecache/consistenthash"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
-	"io/ioutil"
+	"sync"
 )
 
 
 
-const defaultBasePath = "/_geecache/"
+const (
+	defaultBasePath = "/_geecache/"
+	defaultReplicas = 50
+)
 
 // HTTPPool implements PeerPicker for a pool of HTTP peers
 type HTTPPool struct {
 	// this peer's base URL
 	self string
 	basePath string
+	mu sync.Mutex 
+	peers *consistenthash.Map
+	httpGetters map[string]*httpGetter
 }
 
 // NewHTTPPool initializes PeerPicker for a pool of HTTP peers
@@ -93,6 +101,27 @@ func (h *httpGetter) Get(group string, key string) ([]byte, error) {
 	}
 
 	return bytes, nil
+}
+
+func (p *HTTPPool) Set(peers ...string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.peers = consistenthash.New(defaultReplicas, nil)
+	p.peers.Add(peers...)
+	p.httpGetters = make(map[string]*httpGetter, len(peers))
+	for _, peer := range peers {
+		p.httpGetters[peer] = &httpGetter{baseURL: peer + p.basePath}
+	}
+}
+
+func (p *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if peer := p.peers.Get(key); peer != "" && peer != p.self {
+		p.Log("Pick peer %s", peer)
+		return p.httpGetters[peer], true
+	}
+	return nil, false
 }
 
 var _PeerGetter = (*httpGetter)(nil)
