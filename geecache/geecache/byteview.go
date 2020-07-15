@@ -20,6 +20,7 @@ func (v ByteView) String() string {
 	return string(v.b)
 }
 
+// cloneBytes 深度拷贝数据
 func cloneBytes(b []byte) []byte {
 	c := make([]byte, len(b))
 	copy(c, b)
