@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	pb "geecache/geecachepb"
+	"github.com/golang/protobuf/proto"
 )
 
 
@@ -70,39 +72,40 @@ func (p *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view, err := group.Get(key)
+	body, err := proto.Marshal(&pb.Response{Value: view.ByteSlice()})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Write(view.ByteSlice())
+	w.Write(body)
 }
 
 // Get 为httpGetter实现PeerGetter接口的方法，通过数据获取器的API获取数据
-func (h *httpGetter) Get(group string, key string) ([]byte, error) {
+func (h *httpGetter) Get(in *pb.Request, out *pb.Response) error {
 	u := fmt.Sprintf(
 		"%v%v/%v",
 		h.baseURL,
-		url.QueryEscape(group),
-		url.QueryEscape(key),
+		url.QueryEscape(in.GetGroup()),
+		url.QueryEscape(in.GetKey()),
 	)
 	res, err := http.Get(u)
 	if err != nil {
-		return nil, err
+		return  err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server return: %v", res.Status)
+		return fmt.Errorf("server return: %v", res.Status)
 	}
 
 	bytes, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading response body: %v", err)
+	if err = proto.Unmarshal(bytes, out); err != nil {
+		return fmt.Errorf("decoding response body: %v", err)
 	}
 
-	return bytes, nil
+	return nil
 }
 
 // Set 初始化HTTPPool，创建一致性哈希表，并添加虚拟节点，保存每个节点的数据获取器

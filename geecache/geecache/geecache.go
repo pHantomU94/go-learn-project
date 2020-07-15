@@ -5,6 +5,7 @@ import (
 	"geecache/singleflight"
 	"log"
 	"sync"
+	pb "geecache/geecachepb"
 )
 
 // Getter 数据获取接口（如访问数据库）
@@ -120,9 +121,14 @@ func (g *Group) load(key string) (value ByteView, err error) {
 
 // getFromPeer 根绝key选择节点位置，获取指定PeerGetter，通过API访问数据
 func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
-	bytes, err := peer.Get(g.name, key)
+	req := &pb.Request{
+		Group: g.name,
+		Key: key,
+	}
+	res := &pb.Response{}
+	err := peer.Get(req, res)
 	if err != nil {
 		return ByteView{}, err
 	}
-	return ByteView{b: bytes}, err
+	return ByteView{b: res.Value}, err
 }
