@@ -130,5 +130,3 @@ func (p *HTTPPool) PickPeer(key string) (PeerGetter, bool) {
 	}
 	return nil, false
 }
-
-var _PeerGetter = (*httpGetter)(nil)
