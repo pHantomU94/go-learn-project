@@ -2,6 +2,7 @@ package geeorm
 
 import (
 	"database/sql"
+	"geeorm/dialect"
 	"geeorm/log"
 	"geeorm/session"
 )
@@ -9,6 +10,7 @@ import (
 // Engine 数据库访问引擎
 type Engine struct {
 	db *sql.DB
+	dial dialect.Dialect
 }
 
 // NewEngine 创建新的数据库访问连接，并Ping数据库
@@ -22,6 +24,12 @@ func NewEngine(driver, source string) (e *Engine, err error) {
 		log.Error(err)
 		return
 	}
+	dial, ok := dialect.GetDialect(driver)
+	if !ok {
+		log.Errorf("dialect %s is not exists", driver)
+		return
+	}
+	e = &Engine{db: db, dial: dial}
 	log.Info("Connect database success")
 	return &Engine{db: db}, err
 }
@@ -37,5 +45,5 @@ func (e *Engine) Close() {
 
 // NewSession 创建新的数据库访问会话
 func (e *Engine) NewSession() *session.Session {
-	return session.New(e.db)
+	return session.New(e.db, e.dial)
 }
