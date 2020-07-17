@@ -2,20 +2,27 @@ package session
 
 import (
 	"database/sql"
+	"geeorm/dialect"
 	"geeorm/log"
+	"geeorm/schema"
 	"strings"
 )
 
 // Session 数据库访问会话
 type Session struct {
 	db *sql.DB	// 数据库指针
+	dial dialect.Dialect // 所连接数据库类型的方言
+	refTable *schema.Schema // 会话当前维护的数据库表
 	sql strings.Builder // 数据库操作语句
 	sqlVars []interface{} // 数据库操作占位符对应的参数
 }
 
 // New 用于创建一个新的数据库访问会话
-func New(db *sql.DB) *Session {
-	return &Session{db: db}
+func New(db *sql.DB, dial dialect.Dialect) *Session {
+	return &Session{
+		db: db,
+		dial: dial,
+	}
 } 
 
 // Clear 清理会话中的sql语句与参数，使请求可以复用
