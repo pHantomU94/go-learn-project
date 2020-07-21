@@ -2,6 +2,7 @@ package session
 
 import (
 	"database/sql"
+	"geeorm/clause"
 	"geeorm/dialect"
 	"geeorm/log"
 	"geeorm/schema"
@@ -15,6 +16,7 @@ type Session struct {
 	refTable *schema.Schema // 会话当前维护的数据库表
 	sql strings.Builder // 数据库操作语句
 	sqlVars []interface{} // 数据库操作占位符对应的参数
+	clause clause.Clause
 }
 
 // New 用于创建一个新的数据库访问会话
@@ -29,6 +31,7 @@ func New(db *sql.DB, dial dialect.Dialect) *Session {
 func (sess *Session) Clear() {
 	sess.sql.Reset()
 	sess.sqlVars = nil
+	sess.clause = clause.Clause{}
 }
 
 // DB 返回会话的数据库指针

@@ -49,6 +49,5 @@ func (sess *Session) HasTable() bool {
 	row := sess.Raw(sql, values...).QueryRow()
 	var tmp string
 	_ = row.Scan(&tmp)
-	log.Info(tmp)
 	return tmp == sess.GetrefTable().Name
 }

@@ -32,6 +32,16 @@ func (s *Schema) GetField(name string) *Field{
 	return field
 }
 
+// RecordValues 将一个类对象根据成员变量顺序，平铺其对应的值，返回的是各个成员的值切片
+func (s *Schema) RecordValues(dest interface{}) []interface{} {
+	destValue := reflect.Indirect(reflect.ValueOf(dest))
+	var fieldValues []interface{}
+	for _, field := range s.Fields {
+		fieldValues = append(fieldValues, destValue.FieldByName(field.Name).Interface())
+	}
+	return fieldValues
+}
+
 // Parse 用来将一个对象映射成一个表概要
 func Parse(obj interface{}, d dialect.Dialect) *Schema {
 	modelType := reflect.Indirect(reflect.ValueOf(obj)).Type()
