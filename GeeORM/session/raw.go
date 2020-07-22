@@ -12,11 +12,22 @@ import (
 // Session 数据库访问会话
 type Session struct {
 	db *sql.DB	// 数据库指针
+	tx *sql.Tx	// 数据库事务操作指针
 	dial dialect.Dialect // 所连接数据库类型的方言
 	refTable *schema.Schema // 会话当前维护的数据库表
 	sql strings.Builder // 数据库操作语句
 	sqlVars []interface{} // 数据库操作占位符对应的参数
 	clause clause.Clause
+}
+
+var _ CommonDB = (*sql.DB)(nil)
+var _ CommonDB = (*sql.Tx)(nil)
+
+// CommonDB 数据库操作的的最小化实现
+type CommonDB interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
 // New 用于创建一个新的数据库访问会话
@@ -35,7 +46,10 @@ func (sess *Session) Clear() {
 }
 
 // DB 返回会话的数据库指针
-func (sess *Session) DB() *sql.DB {
+func (sess *Session) DB() CommonDB {
+	if sess.tx != nil {
+		return sess.tx
+	}
 	return sess.db
 }
 

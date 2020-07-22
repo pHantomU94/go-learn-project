@@ -31,7 +31,7 @@ func NewEngine(driver, source string) (e *Engine, err error) {
 	}
 	e = &Engine{db: db, dial: dial}
 	log.Info("Connect database success")
-	return &Engine{db: db}, err
+	return 
 }
 
 // Close 关闭数据库访问连接
@@ -46,4 +46,26 @@ func (e *Engine) Close() {
 // NewSession 创建新的数据库访问会话
 func (e *Engine) NewSession() *session.Session {
 	return session.New(e.db, e.dial)
+}
+
+// TxFunc 事务函数模板
+type TxFunc func(*session.Session) (reslut interface{}, err error)
+
+// Transaction 事务接口
+func (e *Engine) Transaction(f TxFunc) (result interface{}, err error) {
+	s := e.NewSession()
+	if err := s.Begin(); err != nil {
+		return nil, err
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = s.Rollback()
+			panic(p)
+		} else if err != nil {
+			_ = s.Rollback()
+		} else {
+			_ = s.Commit()
+		} 
+	}()
+	return f(s)
 }
